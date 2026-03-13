@@ -77,6 +77,7 @@ def create_repository(name: str, agent: Agent) -> str:
 
     Args:
         name (str): The name of the repository to create.
+        agent (Agent): The agent providing GitHub configuration.
 
     Returns:
         str: The result of the creation operation.
@@ -98,7 +99,10 @@ def create_repository(name: str, agent: Agent) -> str:
             repo_url = response.json()["html_url"]
             return f"Created private repository '{name}' at {repo_url}"
         else:
-            error_message = response.json().get("message", response.text)
+            try:
+                error_message = response.json().get("message", response.text)
+            except ValueError:
+                error_message = response.text
             raise CommandExecutionError(
                 f"Could not create repository: {error_message}"
             )
