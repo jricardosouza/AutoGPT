@@ -53,13 +53,13 @@ def test_create_repository_success(mock_requests_post, agent: Agent):
     mock_response = MagicMock()
     mock_response.status_code = 201
     mock_response.json.return_value = {
-        "html_url": "https://github.com/user/new-repo",
+        "html_url": "https://github.com/user/hostinger-api-integration",
     }
     mock_requests_post.return_value = mock_response
 
-    result = create_repository(name="new-repo", agent=agent)
+    result = create_repository(agent=agent)
 
-    assert result == "Created private repository 'new-repo' at https://github.com/user/new-repo"
+    assert result == "Created private repository 'hostinger-api-integration' at https://github.com/user/hostinger-api-integration"
     mock_requests_post.assert_called_once_with(
         "https://api.github.com/user/repos",
         headers={
@@ -67,7 +67,7 @@ def test_create_repository_success(mock_requests_post, agent: Agent):
             "Accept": "application/vnd.github.v3+json",
         },
         json={
-            "name": "new-repo",
+            "name": "hostinger-api-integration",
             "private": True,
         },
         timeout=30,
@@ -83,7 +83,7 @@ def test_create_repository_error(mock_requests_post, agent: Agent):
     mock_requests_post.return_value = mock_response
 
     with pytest.raises(CommandExecutionError):
-        create_repository(name="existing-repo", agent=agent)
+        create_repository(agent=agent)
 
 
 def test_create_repository_network_error(mock_requests_post, agent: Agent):
@@ -92,4 +92,4 @@ def test_create_repository_network_error(mock_requests_post, agent: Agent):
     mock_requests_post.side_effect = requests.ConnectionError("Network error")
 
     with pytest.raises(CommandExecutionError):
-        create_repository(name="new-repo", agent=agent)
+        create_repository(agent=agent)

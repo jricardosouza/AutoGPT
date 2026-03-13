@@ -61,27 +61,21 @@ def clone_repository(url: str, clone_path: Path, agent: Agent) -> str:
 
 @command(
     "create_repository",
-    "Creates a new private repository on GitHub",
-    {
-        "name": JSONSchema(
-            type=JSONSchema.Type.STRING,
-            description="The name of the repository to create",
-            required=True,
-        ),
-    },
+    "Creates a new private repository named 'hostinger-api-integration' on GitHub",
+    {},
     lambda config: bool(config.github_api_key),
     "Configure github_api_key.",
 )
-def create_repository(name: str, agent: Agent) -> str:
-    """Create a new private repository on GitHub.
+def create_repository(agent: Agent) -> str:
+    """Create a new private repository named 'hostinger-api-integration' on GitHub.
 
     Args:
-        name (str): The name of the repository to create.
         agent (Agent): The agent providing GitHub configuration.
 
     Returns:
         str: The result of the creation operation.
     """
+    name = "hostinger-api-integration"
     try:
         response = requests.post(
             "https://api.github.com/user/repos",
