@@ -1,10 +1,11 @@
 import pytest
 from git.exc import GitCommandError
 from git.repo.base import Repo
+from unittest.mock import MagicMock
 
 from autogpt.agents.agent import Agent
 from autogpt.agents.utils.exceptions import CommandExecutionError
-from autogpt.commands.git_operations import clone_repository
+from autogpt.commands.git_operations import clone_repository, create_repository
 
 
 @pytest.fixture
@@ -41,3 +42,54 @@ def test_clone_repository_error(workspace, mock_clone_from, agent: Agent):
 
     with pytest.raises(CommandExecutionError):
         clone_repository(url=url, clone_path=clone_path, agent=agent)
+
+
+@pytest.fixture
+def mock_requests_post(mocker):
+    return mocker.patch("autogpt.commands.git_operations.requests.post")
+
+
+def test_create_repository_success(mock_requests_post, agent: Agent):
+    mock_response = MagicMock()
+    mock_response.status_code = 201
+    mock_response.json.return_value = {
+        "html_url": "https://github.com/user/new-repo",
+    }
+    mock_requests_post.return_value = mock_response
+
+    result = create_repository(name="new-repo", agent=agent)
+
+    assert result == "Created private repository 'new-repo' at https://github.com/user/new-repo"
+    mock_requests_post.assert_called_once_with(
+        "https://api.github.com/user/repos",
+        headers={
+            "Authorization": f"token {agent.legacy_config.github_api_key}",
+            "Accept": "application/vnd.github.v3+json",
+        },
+        json={
+            "name": "new-repo",
+            "private": True,
+        },
+        timeout=30,
+    )
+
+
+def test_create_repository_error(mock_requests_post, agent: Agent):
+    mock_response = MagicMock()
+    mock_response.status_code = 422
+    mock_response.json.return_value = {
+        "message": "Repository creation failed: name already exists on this account",
+    }
+    mock_requests_post.return_value = mock_response
+
+    with pytest.raises(CommandExecutionError):
+        create_repository(name="existing-repo", agent=agent)
+
+
+def test_create_repository_network_error(mock_requests_post, agent: Agent):
+    import requests
+
+    mock_requests_post.side_effect = requests.ConnectionError("Network error")
+
+    with pytest.raises(CommandExecutionError):
+        create_repository(name="new-repo", agent=agent)

@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import requests
 from git.repo import Repo
 
 from autogpt.agents.agent import Agent
@@ -56,3 +57,50 @@ def clone_repository(url: str, clone_path: Path, agent: Agent) -> str:
         raise CommandExecutionError(f"Could not clone repo: {e}")
 
     return f"""Cloned {url} to {clone_path}"""
+
+
+@command(
+    "create_repository",
+    "Creates a new private repository on GitHub",
+    {
+        "name": JSONSchema(
+            type=JSONSchema.Type.STRING,
+            description="The name of the repository to create",
+            required=True,
+        ),
+    },
+    lambda config: bool(config.github_api_key),
+    "Configure github_api_key.",
+)
+def create_repository(name: str, agent: Agent) -> str:
+    """Create a new private repository on GitHub.
+
+    Args:
+        name (str): The name of the repository to create.
+
+    Returns:
+        str: The result of the creation operation.
+    """
+    try:
+        response = requests.post(
+            "https://api.github.com/user/repos",
+            headers={
+                "Authorization": f"token {agent.legacy_config.github_api_key}",
+                "Accept": "application/vnd.github.v3+json",
+            },
+            json={
+                "name": name,
+                "private": True,
+            },
+            timeout=30,
+        )
+        if response.status_code == 201:
+            repo_url = response.json()["html_url"]
+            return f"Created private repository '{name}' at {repo_url}"
+        else:
+            error_message = response.json().get("message", response.text)
+            raise CommandExecutionError(
+                f"Could not create repository: {error_message}"
+            )
+    except requests.RequestException as e:
+        raise CommandExecutionError(f"Could not create repository: {e}")
